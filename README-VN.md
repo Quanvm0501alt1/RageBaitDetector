@@ -16,7 +16,9 @@ và yep khi nào Saba nghe bài trình thì ra phiên bản này
 
 ![image](https://github.com/user-attachments/assets/a6fdd42e-ff1c-4b69-af32-1562a3ee9c75)
 
-giỡn thôi khi nào saba stream thêm 1 bữa nữa thì ra
+h cơ bản code hoàn thành chờ con lỏ saba contact thôi
+
+giỡn thôi khi nào saba contact mình và thêm source thì sẽ ra bản special
 ## Misc.
 Sẽ sớm có thêm nhiều nền tảng mới!
 
