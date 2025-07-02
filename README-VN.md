@@ -3,6 +3,8 @@ Userscript Máy dò Rage Bait cho Facebook và X!
 
 Nhìn thấy quá nhiều rage bait? Để Script này nấu!
 - Phát hiện Rage Bait trong Facebook và X của bạn, giúp bạn tốt hơn và cũng sẽ khiến kẻ tạo ra Rage Bait biến mất!
+
+**Giờ phở bò đang bị lỗi chờ cách cứu**
 ## Cách cài?
 Nhấn [vào đây](https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js) hoặc dùng url bên dưới
 
