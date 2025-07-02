@@ -20,6 +20,8 @@
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @updateURL    https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js
+// @downloadURL  https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js
 // ==/UserScript==
 
 (function() {
