@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Rage Bait Detector with Improved Repost Handling for X
+// @name         Rage Bait Detector - Enhanced Post Detection for X
 // @namespace    http://tampermonkey.net/
-// @version      0.5
-// @description  Detects potential "rage bait" in posts, placing the score next to interaction buttons like Grok AI.
+// @version      1.0 // Major version increment due to significant detection improvements
+// @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X.
 // @author       Your Name
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
@@ -17,7 +17,11 @@
     // You can get one from console.groq.com
     const GROQCLOUD_API_KEY = 'YOUR_GROQCLOUD_API_KEY_HERE'; // Assuming this is your key from previous context
     const GROQCLOUD_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    const GROQCLOUD_MODEL = 'llama3-8b-8192'; // You can choose another model if available
+    // For GroqCloud AI Models, look at https://console.groq.com/docs/models and https://console.groq.com/docs/rate-limit
+    // const GROQCLOUD_MODEL = 'gemma2-9b-it'; // Highest TPM (Token Per Minutes) but 30 RPM (Request Per Minutes)
+    const GROQCLOUD_MODEL = 'llama3-8b-8192'; // Recommend, working properly, but 30 RPM (Request Per Minutes)
+    // const GROQCLOUD_MODEL = 'llama3-70b-8192'; // Better, working properly, but still 30 RPM (Request Per Minutes)
+    // const GROQCLOUD_MODEL = 'qwen/qwen3-32b'; // Highest RPM (60 RPM) but this AI are giving invaild response
 
     // Heuristic Threshold: If the heuristic score is >= this value, trigger AI analysis.
     const HEURISTIC_THRESHOLD = 5;
@@ -27,45 +31,74 @@
         'facebook.com': {
             post: 'div[role="article"][aria-labelledby]', // Main post container
             text: 'div[data-ad-preview="message"], div[data-testid="post_message"], span[dir="auto"]', // Common text containers
-            // Target for score placement: the footer containing like/comment/share buttons
-            targetForScore: 'div[role="article"][aria-labelledby] > div:nth-child(2) > div:last-child > div:last-child, div[role="article"][aria-labelledby] > div:nth-child(2) > div:nth-child(3) > div:last-child'
+            targetForScoreBottom: 'div[role="article"][aria-labelledby] > div:nth-child(2) > div:last-child > div:last-child, div[role="article"][aria-labelledby] > div:nth-child(2) > div:nth-child(3) > div:last-child',
+            targetForScoreTop: 'div[role="article"][aria-labelledby] > div:first-child'
         },
         'twitter.com': { // X.com
-            post: 'article[data-testid="tweet"]', // Main tweet container
-            // Text extraction is handled specially in getPostText for Twitter to combine quoted tweets
-            text: 'div[data-testid="tweetText"]', // This is just a hint, actual logic is in getPostText
+            // Broader post selector to catch more variations including reposts and recommended posts
+            post: 'article[data-testid="tweet"], div[data-testid="cellInnerDiv"] > article[role="article"]',
+            text: 'div[data-testid="tweetText"], span[dir="auto"], div[lang]', // Primary text content, getPostText handles more
             // Target for score placement: the tweet actions bar
-            targetForScore: 'div[role="group"][aria-label="Tweet actions"]'
+            targetForScoreBottom: 'div[role="group"][aria-label="Tweet actions"]',
+            // Specific for X: target the div that contains username/handle/timestamp/caret menu
+            targetForScoreTop: 'div[data-testid="User-Names"] ~ div[dir="ltr"], div[data-testid="User-Names"]'
         },
-        // Generic selectors for other sites if platform-specific ones don't match
         'default': {
             post: 'article, .post, .story, div[class*="post"], div[class*="article"], div[data-testid="post-content"]',
-            text: 'p, span, div', // Look for common text elements within the post
-            targetForScore: '.post-footer, .post-meta, .entry-meta, .post-actions, .article-footer' // Generic footer/action areas
+            text: 'p, span, div',
+            targetForScoreBottom: '.post-footer, .post-meta, .entry-meta, .post-actions, .article-footer',
+            targetForScoreTop: '.post-header, .entry-header'
         }
     };
 
     // --- Styling for the injected UI elements ---
     GM_addStyle(`
+        /* Styles for the detailed score container at the bottom */
         .rage-bait-score-container {
             font-family: 'Inter', sans-serif;
             font-size: 12px;
             padding: 4px 8px;
             margin-left: 8px; /* Space from other buttons */
             border-radius: 8px;
-            display: inline-flex; /* Use flex for better alignment with other inline elements */
-            align-items: center; /* Vertically align content */
+            display: inline-block; /* Allows children to stack */
+            vertical-align: middle; /* Align with other inline elements */
             opacity: 0.9;
             transition: opacity 0.3s ease-in-out;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             background-color: #f0f0f0; /* Default light grey */
             color: #333;
-            z-index: 9999; /* Ensure it's above other content */
-            flex-shrink: 0; /* Prevent shrinking in flex containers */
+            z-index: 9999;
+            flex-shrink: 0;
+            max-width: 200px; /* Limit overall width */
+            white-space: normal; /* Allow text to wrap */
         }
         .rage-bait-score-container:hover {
             opacity: 1;
         }
+
+        /* Styles for the concise score container in the top-right */
+        .rage-bait-score-top-right {
+            position: absolute;
+            top: 8px; /* Distance from top of the post */
+            right: 8px; /* Distance from right of the post */
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            padding: 2px 6px; /* Smaller padding for compactness */
+            border-radius: 8px;
+            opacity: 0.9;
+            transition: opacity 0.3s ease-in-out;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background-color: #f0f0f0; /* Default light grey */
+            color: #333;
+            z-index: 9999;
+            line-height: 1; /* Compact line height */
+        }
+        .rage-bait-score-top-right:hover {
+            opacity: 1;
+        }
+
+
+        /* Common color classes for both score containers */
         .rage-bait-score-low {
             background-color: #d4edda; /* Light green */
             color: #155724;
@@ -82,9 +115,13 @@
             background-color: #e2e3e5; /* Light grey for loading */
             color: #6c757d;
         }
+
+        /* AI result specific styling (only for bottom container) */
         .rage-bait-ai-result {
-            margin-left: 4px; /* Smaller margin for AI result within the container */
+            display: block; /* Make AI result appear on its own line */
+            margin-top: 2px; /* Small space above AI text */
             font-weight: bold;
+            line-height: 1.2; /* Adjust line height for compactness */
         }
 
         /* Styling for the test button */
@@ -256,19 +293,31 @@
         let textContent = '';
 
         if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
-            // For X/Twitter, a repost (quoted tweet) will have multiple tweetText elements.
-            // We want to capture both the main tweet's text and the quoted tweet's text.
-            const tweetTextElements = postElement.querySelectorAll('div[data-testid="tweetText"]');
-            if (tweetTextElements.length > 0) {
-                textContent = Array.from(tweetTextElements).map(el => {
-                    // Extract text from spans within tweetText, or direct textContent
-                    const spans = el.querySelectorAll('span');
-                    if (spans.length > 0) {
-                        return Array.from(spans).map(s => s.textContent).join(' ').trim();
-                    }
-                    return el.textContent.trim();
-                }).filter(text => text.length > 0).join('\n---\n').trim(); // Join with a separator
+            // For X/Twitter, collect text from multiple potential sources
+            const textSources = [
+                ...postElement.querySelectorAll('div[data-testid="tweetText"]'),
+                ...postElement.querySelectorAll('span[dir="auto"]'),
+                ...postElement.querySelectorAll('div[lang]'),
+                // Fallback for elements with aria-label that might contain text (e.g., image descriptions)
+                ...postElement.querySelectorAll('[aria-label]')
+            ];
+
+            const collectedTexts = new Set(); // Use a Set to avoid duplicate text
+
+            for (const source of textSources) {
+                let currentText = '';
+                if (source.hasAttribute('aria-label') && source.tagName !== 'A') { // Avoid links
+                    currentText = source.getAttribute('aria-label').trim();
+                } else {
+                    currentText = source.textContent.trim();
+                }
+
+                if (currentText.length > 0) {
+                    collectedTexts.add(currentText);
+                }
             }
+            textContent = Array.from(collectedTexts).filter(text => text.length > 0).join('\n---\n').trim();
+
         } else if (hostname.includes('facebook.com')) {
             const textSelectors = PLATFORM_SELECTORS['facebook.com'].text.split(', ');
             for (const selector of textSelectors) {
@@ -295,7 +344,7 @@
         }
 
         // Remove common UI text that isn't part of the post content
-        textContent = textContent.replace(/Like|Comment|Share|Retweet|Quote|Reply|View all comments|See more|Grok AI/g, '').trim();
+        textContent = textContent.replace(/Like|Comment|Share|Retweet|Quote|Reply|View all comments|See more|Grok AI|Ad|Promoted/g, '').trim();
 
         return textContent;
     }
@@ -307,61 +356,127 @@
      * @param {HTMLElement} postElement The DOM element representing a post.
      */
     async function processPost(postElement) {
-        // Avoid processing the same post multiple times or posts that are too short
-        if (postElement.dataset.rageBaitChecked) {
+        const hostname = window.location.hostname;
+
+        // Skip if already processed
+        if (postElement.dataset.rageBaitChecked && postElement.dataset.rageBaitChecked === 'true') {
             return;
+        }
+
+        // Ad check for X.com: Look for the "Ad" or "Promoted" text within the User-Names section.
+        let isAd = false;
+        if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
+            const userNameSection = postElement.querySelector('[data-testid="User-Names"]');
+            if (userNameSection && (userNameSection.textContent.includes('Ad') || userNameSection.textContent.includes('Promoted'))) {
+                isAd = true;
+            }
         }
 
         const postContent = getPostText(postElement);
 
-        if (!postContent || postContent.length < 50) { // Minimum length to avoid processing short UI elements
+        // Log extracted content for debugging
+        console.log(`Processing post. Is Ad: ${isAd}. Content length: ${postContent.length}. Content snippet: "${postContent.substring(0, 100)}..."`);
+
+        if (!postContent || postContent.length < 30) { // Reduced minimum length slightly for very short valid posts
+            // Mark as checked to prevent future attempts for too-short posts
+            postElement.dataset.rageBaitChecked = 'true';
+            console.log(`Skipping post due to insufficient content length (${postContent.length}).`);
             return;
         }
 
-        postElement.dataset.rageBaitChecked = 'true'; // Mark as checked
+        // Mark as checked *before* performing heavy operations
+        postElement.dataset.rageBaitChecked = 'true';
 
         const heuristicScore = calculateHeuristicScore(postContent);
 
-        // Create and inject the score display container
-        const scoreContainer = document.createElement('div');
-        scoreContainer.className = 'rage-bait-score-container';
+        // --- 1. Create and inject the CONCISE TOP-RIGHT score display ---
+        const topRightScoreContainer = document.createElement('div');
+        topRightScoreContainer.className = 'rage-bait-score-top-right';
         if (heuristicScore >= 8) {
-            scoreContainer.classList.add('rage-bait-score-high');
+            topRightScoreContainer.classList.add('rage-bait-score-high');
         } else if (heuristicScore >= 5) {
-            scoreContainer.classList.add('rage-bait-score-medium');
+            topRightScoreContainer.classList.add('rage-bait-score-medium');
         } else {
-            scoreContainer.classList.add('rage-bait-score-low');
+            topRightScoreContainer.classList.add('rage-bait-score-low');
         }
-        scoreContainer.innerHTML = `Heuristic Rage Bait Score: <strong>${heuristicScore}/10</strong>`;
+        topRightScoreContainer.innerHTML = `<strong>${heuristicScore}/10</strong>`;
 
-        // Determine the best target element for placement
-        const hostname = window.location.hostname;
-        let targetSelector = PLATFORM_SELECTORS['default'].targetForScore;
-
-        if (hostname.includes('facebook.com')) {
-            targetSelector = PLATFORM_SELECTORS['facebook.com'].targetForScore;
-        } else if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
-            targetSelector = PLATFORM_SELECTORS['twitter.com'].targetForScore;
+        // Ensure post element is relatively positioned for absolute children
+        if (window.getComputedStyle(postElement).position !== 'relative' && window.getComputedStyle(postElement).position !== 'absolute') {
+            postElement.style.position = 'relative';
         }
 
-        let targetElement = postElement.querySelector(targetSelector);
-
-        // Fallback if specific target not found, append to the post element itself
-        if (!targetElement) {
-            console.warn(`Could not find specific target for score placement using selector "${targetSelector}". Appending to post element.`);
-            targetElement = postElement;
+        let appendedTopRight = false;
+        if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
+            // Try specific header elements for X, in order of preference
+            const selectors = PLATFORM_SELECTORS['twitter.com'].targetForScoreTop.split(', ');
+            for (const selector of selectors) {
+                const headerInfoDiv = postElement.querySelector(selector);
+                if (headerInfoDiv) {
+                    const caretButton = headerInfoDiv.querySelector('[data-testid="caret"]');
+                    if (caretButton && caretButton.parentElement) {
+                        caretButton.parentElement.insertBefore(topRightScoreContainer, caretButton);
+                        appendedTopRight = true;
+                        break;
+                    } else {
+                        // If caret not found, append at the beginning of the header div
+                        headerInfoDiv.prepend(topRightScoreContainer);
+                        appendedTopRight = true;
+                        break;
+                    }
+                }
+            }
+        } else if (hostname.includes('facebook.com')) {
+             const headerDiv = postElement.querySelector(PLATFORM_SELECTORS['facebook.com'].targetForScoreTop);
+             if (headerDiv) {
+                 headerDiv.appendChild(topRightScoreContainer);
+                 appendedTopRight = true;
+             }
+        }
+        // Fallback for top-right if not appended to specific header or for default sites
+        if (!appendedTopRight) {
+             postElement.appendChild(topRightScoreContainer);
         }
 
-        // Append the score container to the target element
-        targetElement.appendChild(scoreContainer);
+
+        // --- 2. Create and inject the DETAILED BOTTOM action bar score display ---
+        // Skip detailed analysis for ads to prevent misalignment and unnecessary API calls.
+        if (isAd) {
+             console.log('Skipping detailed rage bait analysis for ad:', postContent.substring(0, 50) + '...');
+             return; // Exit here, don't show bottom score or run AI for ads
+        }
+
+        const bottomActionScoreContainer = document.createElement('div');
+        bottomActionScoreContainer.className = 'rage-bait-score-container';
+        if (heuristicScore >= 8) {
+            bottomActionScoreContainer.classList.add('rage-bait-score-high');
+        } else if (heuristicScore >= 5) {
+            bottomActionScoreContainer.classList.add('rage-bait-score-medium');
+        } else {
+            bottomActionScoreContainer.classList.add('rage-bait-score-low');
+        }
+        bottomActionScoreContainer.innerHTML = `Heuristic Rage Bait Score: <strong>${heuristicScore}/10</strong>`;
+
+        let targetSelectorBottom = PLATFORM_SELECTORS[hostname.includes('twitter.com') || hostname.includes('x.com') ? 'twitter.com' : (hostname.includes('facebook.com') ? 'facebook.com' : 'default')].targetForScoreBottom;
+        let targetElementBottom = postElement.querySelector(targetSelectorBottom);
+
+        if (!targetElementBottom) {
+            // Fallback: search within the entire post element for common action bar elements
+            targetElementBottom = postElement.querySelector('div[role="group"][aria-label], div[data-testid*="actions"], footer');
+            if (!targetElementBottom) {
+                 console.warn(`Could not find specific target for bottom score placement using selector "${targetSelectorBottom}". Appending to post element.`);
+                 targetElementBottom = postElement;
+            }
+        }
+        targetElementBottom.appendChild(bottomActionScoreContainer);
 
 
-        // If heuristic score is high enough, trigger AI analysis
+        // Only add AI analysis to the bottom container if heuristic score is high enough
         if (heuristicScore >= HEURISTIC_THRESHOLD) {
             const aiResultSpan = document.createElement('span');
             aiResultSpan.className = 'rage-bait-ai-result rage-bait-score-loading';
             aiResultSpan.textContent = ' (AI Analyzing...)';
-            scoreContainer.appendChild(aiResultSpan);
+            bottomActionScoreContainer.appendChild(aiResultSpan);
 
             try {
                 const aiResult = await analyzeWithGroqCloud(postContent);
@@ -397,13 +512,22 @@
                             postSelector = PLATFORM_SELECTORS['twitter.com'].post;
                         }
 
-                        // Check if the added node itself is a post
+                        // Process the added node itself if it's a post
                         if (node.matches && node.matches(postSelector)) {
                             processPost(node);
                         }
-                        // Check if any children of the added node are posts
+
+                        // Recursively check for posts within the added node's children
                         if (node.querySelectorAll) {
-                            node.querySelectorAll(postSelector).forEach(processPost);
+                            // Use a more specific selector for X.com to avoid processing non-post articles
+                            const specificPostSelector = (hostname.includes('twitter.com') || hostname.includes('x.com')) ? PLATFORM_SELECTORS['twitter.com'].post : postSelector;
+
+                            node.querySelectorAll(specificPostSelector).forEach(post => {
+                                // Ensure we're not reprocessing a parent that contains this post
+                                if (!post.dataset.rageBaitChecked) {
+                                    processPost(post);
+                                }
+                            });
                         }
                     }
                 });
@@ -471,13 +595,13 @@
             {
                 name: 'High Rage Bait (Heuristic & AI)',
                 text: 'This is the most OUTRAGEOUS thing I have ever seen!!! You won\'t BELIEVE what happened next! Share if you agree!',
-                expectedHeuristic: 10, // Adjusted expectation
+                expectedHeuristic: 10,
                 expectedAI: 'YES'
             },
             {
                 name: 'Medium Rage Bait (Heuristic)',
                 text: 'I\'m so frustrated with the current state of affairs. What do you think about this controversial topic?',
-                expectedHeuristic: 6, // Adjusted expectation
+                expectedHeuristic: 6,
                 expectedAI: 'YES'
             },
             {
@@ -489,13 +613,13 @@
             {
                 name: 'Mixed Content',
                 text: 'Some people are so ridiculous! But then again, I had a nice cup of tea this morning. What\'s your opinion?',
-                expectedHeuristic: 4, // Adjusted expectation
-                expectedAI: 'YES' // Mock AI should now catch "ridiculous" and "what's your opinion"
+                expectedHeuristic: 4,
+                expectedAI: 'YES'
             },
             {
                 name: 'Excessive Caps/Punctuation',
                 text: 'WHY IS THIS HAPPENING?!?! THIS IS INSANE!!!',
-                expectedHeuristic: 10, // Adjusted expectation
+                expectedHeuristic: 10,
                 expectedAI: 'YES'
             },
             {
@@ -513,7 +637,7 @@
             // Test Heuristic Score
             const heuristicResult = calculateHeuristicScore(test.text);
             console.log(`Heuristic Score: ${heuristicResult}/10 (Expected: ${test.expectedHeuristic})`);
-            if (Math.abs(heuristicResult - test.expectedHeuristic) <= 1) { // Allow for slight variations due to rounding
+            if (Math.abs(heuristicResult - test.expectedHeuristic) <= 1) {
                 console.log('Heuristic Test: PASSED (within tolerance)');
             } else {
                 console.warn('Heuristic Test: FAILED');
