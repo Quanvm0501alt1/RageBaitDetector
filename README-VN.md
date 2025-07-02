@@ -9,6 +9,7 @@ Nhấn [vào đây](https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/
 https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js
 ### Bản đặc biệt dành cho fan
 Sameko Saba [Youtube](https://www.youtube.com/@SamekoSaba) [X](https://x.com/samekosaba) aka Gawr Gura nhưng đã đầu thai, đang bị một cái vấn đề khi quên nghe bài trình, đó là mấy thằng c.h.ó rage bait creator, đây là một ví dụ:
+
 ![what the f**k I am seeing?](https://github.com/user-attachments/assets/544f2a21-df8a-4348-9b18-271f25293e71)
 
 và yep khi nào Saba nghe bài trình thì ra phiên bản này![image](https://github.com/user-attachments/assets/a6fdd42e-ff1c-4b69-af32-1562a3ee9c75)
