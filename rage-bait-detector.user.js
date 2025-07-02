@@ -1,10 +1,17 @@
 // ==UserScript==
 // @name         Rage Bait Detector - Enhanced Post Detection for X
 // @namespace    http://tampermonkey.net/
-// @version      1.0 // Major version increment due to significant detection improvements
+// @version      1.1
 // @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X.
 // @author       Your Name
-// @match        *://*/*
+// @match        http://facebook.com/
+// @match        https://facebook.com/
+// @match        http://facebook.com/*
+// @match        https://facebook.com/*
+// @match        http://x.com/
+// @match        https://x.com/
+// @match        http://x.com/*
+// @match        https://x.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // ==/UserScript==
