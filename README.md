@@ -14,6 +14,8 @@ Sameko Saba [Youtube](https://www.youtube.com/@SamekoSaba) [X](https://x.com/sam
 here's an example:
 ![what the f**k I am seeing?](https://github.com/user-attachments/assets/544f2a21-df8a-4348-9b18-271f25293e71)
 
+and yep they're coming soon
+
 ## Misc.
 More platform are coming soon!
 
