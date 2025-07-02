@@ -5,7 +5,9 @@
 // @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X.
 // @author       @quanvm0501alt1, @SamekoSaba // X / Twitter
 // @author       @vmquanalt1 // Discord
-// @author       Gemini, Grok
+// @author       quanvm0501@gmail.com // My main mail
+// @author       quanvm0501alt1@tutamail.com // My alt mail
+// @author       Gemini, Grok // All supported AIs
 // @match        http://facebook.com/
 // @match        https://facebook.com/
 // @match        http://facebook.com/*
@@ -154,7 +156,10 @@
             background-color: #45a049;
         }
     `);
-
+    url = window.location.href
+    if (url.include("facebook.com")) {
+        alert("Currently Facebook It's not working, I ('till saba working with me i'll still say I) will find an method and algothim to put the herustic and score in\n The userscript and code still works in X, don't worry, it's not working in Facebook")
+    }
     // --- Heuristic Rage Bait Scoring Algorithm ---
     /**
      * Calculates a heuristic "rage bait" score for a given text.
