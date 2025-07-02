@@ -5,6 +5,7 @@
 // @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X.
 // @author       @quanvm0501alt1, @SamekoSaba // X / Twitter
 // @author       @vmquanalt1 // Discord
+// @author       Gemini, Grok
 // @match        http://facebook.com/
 // @match        https://facebook.com/
 // @match        http://facebook.com/*
