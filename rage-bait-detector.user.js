@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         Rage Bait Detector - Enhanced Post Detection for X
+// @name         Rage Bait Detector - Enhanced Post Detection for X and Facebook (English) with GUI
 // @namespace    http://tampermonkey.net/
-// @version      1.4
-// @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X.
-// @author       @quanvm0501alt1, @SamekoSaba // X / Twitter
-// @author       @vmquanalt1 // Discord
-// @author       quanvm0501@gmail.com // My main mail
-// @author       quanvm0501alt1@tutamail.com // My alt mail
+// @version      1.6
+// @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X and Facebook. Includes a GUI for settings.
+// @author       @quanvm0501alt1, @SamekoSaba
+// @author       @vmquanalt1
+// @author       quanvm0501@gmail.com
+// @author       quanvm0501alt1@tutamail.com
 // @author       Gemini, Grok // All supported AIs
 // @match        http://facebook.com/
 // @match        https://facebook.com/
@@ -18,21 +18,31 @@
 // @match        https://x.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @updateURL    https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js
+// @downloadURL  https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // --- Configuration ---
-    // IMPORTANT: Replace 'YOUR_GROQCLOUD_API_KEY_HERE' with your actual GroqCloud API key.
-    // You can get one from console.groq.com
-    const GROQCLOUD_API_KEY = 'YOUR_GROQCLOUD_API_KEY_HERE'; // Assuming this is your key from previous context
-    const GROQCLOUD_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    // For GroqCloud AI Models, look at https://console.groq.com/docs/models and https://console.groq.com/docs/rate-limit
-    // const GROQCLOUD_MODEL = 'gemma2-9b-it'; // Highest TPM (Token Per Minutes) but 30 RPM (Request Per Minutes)
-    const GROQCLOUD_MODEL = 'llama3-8b-8192'; // Recommend, working properly, but 30 RPM (Request Per Minutes)
-    // const GROQCLOUD_MODEL = 'llama3-70b-8192'; // Better, working properly, but still 30 RPM (Request Per Minutes)
-    // const GROQCLOUD_MODEL = 'qwen/qwen3-32b'; // Highest RPM (60 RPM) but this AI are giving invaild response
+    // --- Configuration (These will be overridden by GUI settings if available) ---
+    let GROQCLOUD_API_KEY = 'YOUR_GROQCLOUD_API_KEY_HERE'; // Default placeholder
+    let GROQCLOUD_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    let GROQCLOUD_MODEL = 'llama3-8b-8192'; // Default model
+
+    // List of available GroqCloud models for the dropdown
+    const AVAILABLE_GROQCLOUD_MODELS = [
+        { id: 'llama3-8b-8192', name: 'Llama 3 8B (Recommended)' },
+        { id: 'llama3-70b-8192', name: 'Llama 3 70B' },
+        { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
+        { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B (Highest RPM, may be unstable)' },
+        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' },
+        { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B' },
+        { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Llama Prompt Guard 2 22M' },
+        { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Llama Prompt Guard 2 86M' },
+    ];
 
     // Heuristic Threshold: If the heuristic score is >= this value, trigger AI analysis.
     const HEURISTIC_THRESHOLD = 5;
@@ -40,18 +50,45 @@
     // Selectors for identifying posts and their text content on different platforms.
     const PLATFORM_SELECTORS = {
         'facebook.com': {
-            post: 'div[role="article"][aria-labelledby]', // Main post container
-            text: 'div[data-ad-preview="message"], div[data-testid="post_message"], span[dir="auto"]', // Common text containers
-            targetForScoreBottom: 'div[role="article"][aria-labelledby] > div:nth-child(2) > div:last-child > div:last-child, div[role="article"][aria-labelledby] > div:nth-child(2) > div:nth-child(3) > div:last-child',
-            targetForScoreTop: 'div[role="article"][aria-labelledby] > div:first-child'
+            // Even broader and more specific post selectors for Facebook
+            post: 'div[role="feed"] > div > div[data-pagelet^="FeedUnit_"], ' +
+                  'div[role="feed"] > div > div[data-pagelet^="GroupFeed_"] > div[data-pagelet^="FeedUnit_"], ' +
+                  'div[role="feed"] > div > div[data-pagelet^="ProfileFeed_"] > div[data-pagelet^="FeedUnit_"], ' +
+                  'div[role="article"][aria-labelledby], ' +
+                  'div[data-visualcompletion="lazy-load-initial-render"][tabindex="-1"], ' + // Very common wrapper for new posts
+                  'div[data-visualcompletion="ignore-dynamic"][data-ft*="&quot;tn&quot;:&quot;K&quot;"], ' + // Another common post wrapper
+                  'div[data-pagelet="Feed"] > div > div > div > div[data-visualcompletion="ignore-dynamic"]', // Added for more general feed posts
+            // Text content selectors for Facebook (prioritized for accuracy)
+            text: 'div[data-ad-preview="message"], ' +
+                  'div[data-testid="post_message"], ' +
+                  'div[data-ft*="&quot;tn&quot;:&quot;K&quot;"], ' +
+                  'div[dir="auto"] > span[dir="auto"], ' +
+                  'div[style*="text-align: start;"], ' +
+                  'div[data-visualcompletion="ignore-dynamic"] > span[dir="auto"], ' +
+                  'span[dir="auto"], ' +
+                  'div[data-visualcompletion="reading-text"], ' +
+                  'div[data-testid="post-content"] span[dir="auto"]', // More specific for main text content
+            // Target for score placement at the bottom (action bar)
+            targetForScoreBottom: 'div[role="feed"] div[aria-label="Actions for this post"], ' +
+                                  'div[role="article"] [role="toolbar"], ' +
+                                  'div[role="article"][aria-labelledby] > div:nth-child(2) > div:last-child > div:last-child, ' +
+                                  'div[role="article"][aria-labelledby] > div:nth-child(2) > div:nth-child(3) > div:last-child, ' +
+                                  'div[data-testid="UFI2ReactionSummary"] ~ div[role="toolbar"], ' +
+                                  'div[data-visualcompletion="ignore-dynamic"] > div:last-child > div[role="toolbar"]', // Common toolbar at the bottom of posts
+            // Target for score placement in the top-right (header area)
+            targetForScoreTop: 'div[role="article"][aria-labelledby] > div:first-child, ' +
+                               'div[role="feed"] > div > div[data-pagelet^="FeedUnit_"] > div:first-child, ' +
+                               'div[role="feed"] > div > div[data-pagelet^="GroupFeed_"] > div[data-pagelet^="FeedUnit_"] > div:first-child, ' +
+                               'div[role="feed"] > div > div[data-pagelet^="ProfileFeed_"] > div:first-child, ' +
+                               'div[aria-label="More options for this post"], ' +
+                               'div[data-visualcompletion="ignore-dynamic"] div[role="button"][aria-label="More options"], ' +
+                               'div[data-visualcompletion="ignore-dynamic"] div[role="button"][aria-haspopup="menu"], ' +
+                               'div[data-visualcompletion="ignore-dynamic"] > div:first-child > div:last-child > div[role="button"]' // A common pattern for the three-dot menu
         },
         'twitter.com': { // X.com
-            // Broader post selector to catch more variations including reposts and recommended posts
             post: 'article[data-testid="tweet"], div[data-testid="cellInnerDiv"] > article[role="article"]',
-            text: 'div[data-testid="tweetText"], span[dir="auto"], div[lang]', // Primary text content, getPostText handles more
-            // Target for score placement: the tweet actions bar
+            text: 'div[data-testid="tweetText"], span[dir="auto"], div[lang]',
             targetForScoreBottom: 'div[role="group"][aria-label="Tweet actions"]',
-            // Specific for X: target the div that contains username/handle/timestamp/caret menu
             targetForScoreTop: 'div[data-testid="User-Names"] ~ div[dir="ltr"], div[data-testid="User-Names"]'
         },
         'default': {
@@ -72,7 +109,7 @@
             margin-left: 8px; /* Space from other buttons */
             border-radius: 8px;
             display: inline-block; /* Allows children to stack */
-            vertical-align: middle; /* Align with other inline elements */
+            vertical-align: middle; /* Vertically align with other inline elements */
             opacity: 0.9;
             transition: opacity 0.3s ease-in-out;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -123,7 +160,7 @@
             color: #721c24;
         }
         .rage-bait-score-loading {
-            background-color: #e2e3e5; /* Light grey for loading */
+            background-color: #e2e3e5; /* Light grey for loading state */
             color: #6c757d;
         }
 
@@ -155,11 +192,109 @@
         .rage-bait-test-button:hover {
             background-color: #45a049;
         }
+
+        /* Styles for the settings GUI */
+        .rage-bait-settings-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #007bff; /* Blue */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 10000;
+            transition: background-color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .rage-bait-settings-button:hover {
+            background-color: #0056b3;
+        }
+
+        .rage-bait-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .rage-bait-modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 500px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .rage-bait-modal-content h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .rage-bait-modal-content label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .rage-bait-modal-content input[type="text"],
+        .rage-bait-modal-content select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .rage-bait-modal-content button {
+            background-color: #28a745; /* Green for Save */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .rage-bait-modal-content button:hover {
+            background-color: #218838;
+        }
+
+        .rage-bait-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+        .rage-bait-modal-close:hover {
+            color: #333;
+        }
     `);
-    url = window.location.href
-    if (url.include("facebook.com")) {
-        alert("Currently Facebook It's not working, I ('till saba working with me i'll still say I) will find an method and algothim to put the herustic and score in\n The userscript and code still works in X, don't worry, it's not working in Facebook")
-    }
+
     // --- Heuristic Rage Bait Scoring Algorithm ---
     /**
      * Calculates a heuristic "rage bait" score for a given text.
@@ -238,8 +373,9 @@
      * @returns {Promise<string>} A promise that resolves with the AI's analysis result.
      */
     async function analyzeWithGroqCloud(postContent) {
+        // Use the dynamically loaded API key and model
         if (!GROQCLOUD_API_KEY || GROQCLOUD_API_KEY === 'YOUR_GROQCLOUD_API_KEY_HERE') {
-            console.error('GroqCloud API Key is not set. Please update the userscript with your key.');
+            console.error('GroqCloud API Key is not set. Please update the userscript with your key via settings GUI.');
             return 'AI Error: API Key Missing';
         }
 
@@ -264,7 +400,7 @@
                         "Authorization": `Bearer ${GROQCLOUD_API_KEY}`
                     },
                     data: JSON.stringify({
-                        model: GROQCLOUD_MODEL,
+                        model: GROQCLOUD_MODEL, // Use the dynamically loaded model
                         messages: messages,
                         temperature: 0.1, // Keep temperature low for more deterministic answers
                         max_tokens: 150 // Limit response length
@@ -333,6 +469,7 @@
             textContent = Array.from(collectedTexts).filter(text => text.length > 0).join('\n---\n').trim();
 
         } else if (hostname.includes('facebook.com')) {
+            // For Facebook, try to find text content in specific selectors
             const textSelectors = PLATFORM_SELECTORS['facebook.com'].text.split(', ');
             for (const selector of textSelectors) {
                 const potentialTextElement = postElement.querySelector(selector);
@@ -341,6 +478,26 @@
                     if (textContent.length > 0) break;
                 }
             }
+            // Add fallback for specific cases on Facebook
+            if (textContent.length === 0) {
+                const storyContent = postElement.querySelector('[data-pagelet="MediaViewer"] [aria-label="Story content"]');
+                if (storyContent) {
+                    textContent = storyContent.textContent.trim();
+                }
+            }
+            // Generic fallback for text within Facebook posts
+            if (textContent.length === 0) {
+                const genericTextElements = postElement.querySelectorAll('div[dir="auto"], span[dir="auto"], p');
+                for (const el of genericTextElements) {
+                    const text = el.textContent.trim();
+                    // Avoid irrelevant UI text (e.g., like counts, comments)
+                    if (text.length > 10 && !text.match(/^\d+ (Likes|Comments|Shares)/)) {
+                        textContent = text;
+                        break;
+                    }
+                }
+            }
+
         } else { // Default
             const textSelectors = PLATFORM_SELECTORS['default'].text.split(', ');
             for (const selector of textSelectors) {
@@ -358,7 +515,7 @@
         }
 
         // Remove common UI text that isn't part of the post content
-        textContent = textContent.replace(/Like|Comment|Share|Retweet|Quote|Reply|View all comments|See more|Grok AI|Ad|Promoted/g, '').trim();
+        textContent = textContent.replace(/Like|Comment|Share|Retweet|Quote|Reply|View all comments|See more|Grok AI|Ad|Promoted|Sponsored|Được tài trợ/g, '').trim();
 
         return textContent;
     }
@@ -377,11 +534,16 @@
             return;
         }
 
-        // Ad check for X.com: Look for the "Ad" or "Promoted" text within the User-Names section.
+        // Check for ads on X.com and Facebook
         let isAd = false;
         if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
             const userNameSection = postElement.querySelector('[data-testid="User-Names"]');
             if (userNameSection && (userNameSection.textContent.includes('Ad') || userNameSection.textContent.includes('Promoted'))) {
+                isAd = true;
+            }
+        } else if (hostname.includes('facebook.com')) {
+            // Facebook ads often have a 'Sponsored' or 'Được tài trợ' indicator
+            if (postElement.textContent.includes('Sponsored') || postElement.textContent.includes('Được tài trợ')) {
                 isAd = true;
             }
         }
@@ -389,7 +551,7 @@
         const postContent = getPostText(postElement);
 
         // Log extracted content for debugging
-        console.log(`Processing post. Is Ad: ${isAd}. Content length: ${postContent.length}. Content snippet: "${postContent.substring(0, 100)}..."`);
+        console.log(`Processing post. Is Ad: ${isAd}. Content length: ${postContent.length}. Content snippet: "${postContent.substring(0, Math.min(postContent.length, 100))}..."`);
 
         if (!postContent || postContent.length < 30) { // Reduced minimum length slightly for very short valid posts
             // Mark as checked to prevent future attempts for too-short posts
@@ -433,7 +595,7 @@
                         appendedTopRight = true;
                         break;
                     } else {
-                        // If caret not found, append at the beginning of the header div
+                        // Fallback if caret not found but headerInfoDiv exists
                         headerInfoDiv.prepend(topRightScoreContainer);
                         appendedTopRight = true;
                         break;
@@ -441,10 +603,34 @@
                 }
             }
         } else if (hostname.includes('facebook.com')) {
-             const headerDiv = postElement.querySelector(PLATFORM_SELECTORS['facebook.com'].targetForScoreTop);
-             if (headerDiv) {
-                 headerDiv.appendChild(topRightScoreContainer);
-                 appendedTopRight = true;
+             // Try specific header elements for Facebook
+             const selectors = PLATFORM_SELECTORS['facebook.com'].targetForScoreTop.split(', ');
+             for (const selector of selectors) {
+                 const headerDiv = postElement.querySelector(selector);
+                 if (headerDiv) {
+                     const moreOptionsButton = headerDiv.querySelector('div[aria-label="More options for this post"]');
+                     const moreOptionsButton2 = headerDiv.querySelector('div[role="button"][aria-haspopup="menu"]');
+                     const moreOptionsButton3 = headerDiv.querySelector('div[role="button"][aria-label="Actions for this post"]');
+
+                     if (moreOptionsButton && moreOptionsButton.parentElement) {
+                         moreOptionsButton.parentElement.insertBefore(topRightScoreContainer, moreOptionsButton);
+                         appendedTopRight = true;
+                         break;
+                     } else if (moreOptionsButton2 && moreOptionsButton2.parentElement) {
+                         moreOptionsButton2.parentElement.insertBefore(topRightScoreContainer, moreOptionsButton2);
+                         appendedTopRight = true;
+                         break;
+                     } else if (moreOptionsButton3 && moreOptionsButton3.parentElement) {
+                         moreOptionsButton3.parentElement.insertBefore(topRightScoreContainer, moreOptionsButton3);
+                         appendedTopRight = true;
+                         break;
+                     } else {
+                         // If "More options" button not found, append to the end of the header div
+                         headerDiv.appendChild(topRightScoreContainer);
+                         appendedTopRight = true;
+                         break;
+                     }
+                 }
              }
         }
         // Fallback for top-right if not appended to specific header or for default sites
@@ -456,7 +642,7 @@
         // --- 2. Create and inject the DETAILED BOTTOM action bar score display ---
         // Skip detailed analysis for ads to prevent misalignment and unnecessary API calls.
         if (isAd) {
-             console.log('Skipping detailed rage bait analysis for ad:', postContent.substring(0, 50) + '...');
+             console.log('Skipping detailed rage bait analysis for ad:', postContent.substring(0, Math.min(postContent.length, 50)) + '...');
              return; // Exit here, don't show bottom score or run AI for ads
         }
 
@@ -667,7 +853,7 @@
             }
         }
         console.log('\n--- Tests Finished ---');
-        alert('Rage Bait Detector tests completed. Check your browser console for results.');
+        console.log('Rage Bait Detector tests completed. Check your browser console for results.');
     }
 
     // Add a button to trigger tests
@@ -684,6 +870,99 @@
         document.addEventListener('DOMContentLoaded', addTestButton);
     } else {
         addTestButton();
+    }
+
+    // --- Settings GUI Functions ---
+    let settingsModal = null;
+
+    async function loadSettings() {
+        GROQCLOUD_API_KEY = await GM_getValue('groqCloudApiKey', 'YOUR_GROQCLOUD_API_KEY_HERE');
+        GROQCLOUD_MODEL = await GM_getValue('groqCloudModel', 'llama3-8b-8192');
+        console.log('Settings loaded:', { GROQCLOUD_API_KEY: GROQCLOUD_API_KEY.substring(0, 5) + '...', GROQCLOUD_MODEL });
+    }
+
+    async function saveSettings() {
+        const apiKeyInput = document.getElementById('groq-api-key-input');
+        const modelSelect = document.getElementById('groq-model-select');
+
+        if (apiKeyInput && modelSelect) {
+            GROQCLOUD_API_KEY = apiKeyInput.value.trim();
+            GROQCLOUD_MODEL = modelSelect.value;
+
+            await GM_setValue('groqCloudApiKey', GROQCLOUD_API_KEY);
+            await GM_setValue('groqCloudModel', GROQCLOUD_MODEL);
+
+            console.log('Settings saved:', { GROQCLOUD_API_KEY: GROQCLOUD_API_KEY.substring(0, 5) + '...', GROQCLOUD_MODEL });
+            console.log('Settings saved successfully! Please refresh the page for changes to take full effect.');
+            closeSettingsModal();
+        }
+    }
+
+    function openSettingsModal() {
+        if (settingsModal) {
+            settingsModal.style.display = 'flex';
+            // Load current values into the form when opening
+            document.getElementById('groq-api-key-input').value = GROQCLOUD_API_KEY;
+            document.getElementById('groq-model-select').value = GROQCLOUD_MODEL;
+            return;
+        }
+
+        settingsModal = document.createElement('div');
+        settingsModal.className = 'rage-bait-modal-overlay';
+        settingsModal.innerHTML = `
+            <div class="rage-bait-modal-content">
+                <span class="rage-bait-modal-close">&times;</span>
+                <h2>Rage Bait Detector Settings</h2>
+                <label for="groq-api-key-input">GroqCloud API Key:</label>
+                <input type="text" id="groq-api-key-input" placeholder="Enter your GroqCloud API Key">
+
+                <label for="groq-model-select">Select AI Model:</label>
+                <select id="groq-model-select">
+                    ${AVAILABLE_GROQCLOUD_MODELS.map(model => `<option value="${model.id}">${model.name}</option>`).join('')}
+                </select>
+
+                <button id="save-settings-button">Save Settings</button>
+            </div>
+        `;
+        document.body.appendChild(settingsModal);
+
+        // Add event listeners
+        settingsModal.querySelector('.rage-bait-modal-close').onclick = closeSettingsModal;
+        settingsModal.querySelector('#save-settings-button').onclick = saveSettings;
+
+        // Load current values into the form
+        document.getElementById('groq-api-key-input').value = GROQCLOUD_API_KEY;
+        document.getElementById('groq-model-select').value = GROQCLOUD_MODEL;
+    }
+
+    function closeSettingsModal() {
+        if (settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    }
+
+    // Add a button to open the settings GUI
+    function addSettingsButton() {
+        const settingsButton = document.createElement('button');
+        settingsButton.className = 'rage-bait-settings-button';
+        settingsButton.textContent = 'Open Settings';
+        settingsButton.onclick = openSettingsModal;
+        document.body.appendChild(settingsButton);
+    }
+
+    // Load settings and add GUI button on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            addSettingsButton();
+            addTestButton(); // Keep the test button
+        });
+    } else {
+        (async () => {
+            await loadSettings();
+            addSettingsButton();
+            addTestButton(); // Keep the test button
+        })();
     }
 
 })();
