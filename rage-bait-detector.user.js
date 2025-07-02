@@ -17,7 +17,11 @@
     // You can get one from console.groq.com
     const GROQCLOUD_API_KEY = 'YOUR_GROQCLOUD_API_KEY_HERE'; // Assuming this is your key from previous context
     const GROQCLOUD_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    const GROQCLOUD_MODEL = 'llama3-8b-8192'; // You can choose another model if available
+    // For GroqCloud AI Models, look at https://console.groq.com/docs/models and https://console.groq.com/docs/rate-limit
+    // const GROQCLOUD_MODEL = 'gemma2-9b-it'; // Highest TPM (Token Per Minutes) but 30 RPM (Request Per Minutes)
+    const GROQCLOUD_MODEL = 'llama3-8b-8192'; // Recommend, working properly, but 30 RPM (Request Per Minutes)
+    // const GROQCLOUD_MODEL = 'llama3-70b-8192'; // Better, working properly, but still 30 RPM (Request Per Minutes)
+    // const GROQCLOUD_MODEL = 'qwen/qwen3-32b'; // Highest RPM (60 RPM) but this AI are giving invaild response
 
     // Heuristic Threshold: If the heuristic score is >= this value, trigger AI analysis.
     const HEURISTIC_THRESHOLD = 5;
