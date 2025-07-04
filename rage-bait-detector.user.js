@@ -1,20 +1,16 @@
 // ==UserScript==
 // @name         Rage Bait Detector - Enhanced Post Detection for X and Facebook (English) with GUI
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      b1.8
 // @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X and Facebook. Includes a GUI for settings.
 // @author       @quanvm0501alt1, @SamekoSaba
 // @author       @vmquanalt1
 // @author       quanvm0501@gmail.com
 // @author       quanvm0501alt1@tutamail.com
 // @author       Gemini, Grok // All supported AIs
-// @match        http://facebook.com/
-// @match        https://facebook.com/
-// @match        http://facebook.com/*
-// @match        https://facebook.com/*
-// @match        http://x.com/
+// @match        https://*.facebook.com/
+// @match        https://*.facebook.com/*
 // @match        https://x.com/
-// @match        http://x.com/*
 // @match        https://x.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
@@ -292,6 +288,28 @@
         }
         .rage-bait-modal-close:hover {
             color: #333;
+        }
+        /* Styles for the Facebook warning iframe overlay */
+        .facebook-warning-iframe-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10002; /* Higher z-index than settings modal */
+        }
+
+        .facebook-warning-iframe {
+            border: none;
+            width: 90%;
+            max-width: 450px; /* Slightly larger for iframe content */
+            height: 250px; /* Adjust height as needed for content */
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
     `);
 
@@ -964,5 +982,163 @@
             addTestButton(); // Keep the test button
         })();
     }
+    // --- Facebook Warning Modal Functions (using iframe) ---
+    let facebookWarningIframeOverlay = null;
 
+    function showFacebookWarningModal() {
+        if (facebookWarningIframeOverlay) {
+            facebookWarningIframeOverlay.style.display = 'flex';
+            return;
+        }
+
+        facebookWarningIframeOverlay = document.createElement('div');
+        facebookWarningIframeOverlay.className = 'facebook-warning-iframe-overlay';
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'facebook-warning-iframe';
+        iframe.title = 'Facebook Warning';
+
+        // HTML content for the iframe, including its own styles
+        const iframeContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: 'Inter', sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        background-color: #fff; /* Background for iframe content */
+                        color: #333;
+                    }
+                    .facebook-warning-modal-content-inner {
+                        padding: 20px;
+                        border-radius: 8px;
+                        max-width: 400px;
+                        text-align: center;
+                        position: relative;
+                        box-sizing: border-box; /* Ensure padding is included in width */
+                    }
+                    h3 {
+                        color: #d9534f; /* Red for warning */
+                        margin-top: 0;
+                        font-size: 18px;
+                        margin-bottom: 15px;
+                    }
+                    p {
+                        color: #555;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        margin-bottom: 15px;
+                    }
+                    button {
+                        background-color: #007bff; /* Blue for OK button */
+                        color: white;
+                        padding: 8px 15px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: background-color 0.3s ease;
+                    }
+                    button:hover {
+                        background-color: #0056b3;
+                    }
+                    .facebook-warning-modal-close-btn-inner {
+                        position: absolute;
+                        top: 10px;
+                        right: 15px;
+                        font-size: 20px;
+                        cursor: pointer;
+                        color: #888;
+                    }
+                    .facebook-warning-modal-close-btn-inner:hover {
+                        color: #333;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="facebook-warning-modal-content-inner">
+                    <span id="facebook-warning-close-x" class="facebook-warning-modal-close-btn-inner">&times;</span>
+                    <h3>Facebook Error!</h3>
+                    <p>Rage Bait detection functionality on Facebook is currently under development and may not work perfectly.</p>
+                    <p>However, the userscript and AI analysis still work correctly on X.com.</p>
+                    <button id="facebook-warning-modal-ok-inner">Got it</button>
+                </div>
+            </body>
+            </html>
+        `;
+
+        iframe.srcdoc = iframeContent;
+        facebookWarningIframeOverlay.appendChild(iframe);
+        document.body.appendChild(facebookWarningIframeOverlay);
+
+        // Add event listeners to the iframe's content AFTER it has loaded
+        iframe.onload = function() {
+            console.log("iframe loaded, attempting to attach event listeners.");
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+            const okButton = iframeDoc.getElementById('facebook-warning-modal-ok-inner');
+            if (okButton) {
+                okButton.onclick = function() {
+                    console.log("Got it btn clicked inside iframe (via onload listener)");
+                    facebookWarningIframeOverlay.style.display = 'none';
+                    console.log("Facebook warning iframe closed.");
+                };
+            } else {
+                console.warn("OK button not found in iframe.");
+            }
+
+            const closeXButton = iframeDoc.getElementById('facebook-warning-close-x');
+            if (closeXButton) {
+                closeXButton.onclick = function() {
+                    console.log("X btn clicked inside iframe (via onload listener)");
+                    facebookWarningIframeOverlay.style.display = 'none';
+                    console.log("Facebook warning iframe closed.");
+                };
+            } else {
+                console.warn("Close X button not found in iframe.");
+            }
+        };
+    }
+
+    // This function is now only used internally if needed, not directly by iframe
+    function closeFacebookWarningModal() {
+        if (facebookWarningIframeOverlay) {
+            facebookWarningIframeOverlay.style.display = 'none';
+            console.log("Facebook warning overlay hidden by external call.");
+        }
+    }
+
+
+    // Load settings and add GUI button on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            addSettingsButton();
+            addTestButton(); // Keep the test button
+
+            const currentUrl = window.location.href;
+            if (currentUrl.includes("facebook.com")) {
+                console.log("Found Facebook URL in DOMContentLoaded. Showing warning modal.");
+                showFacebookWarningModal();
+            }
+        });
+    } else {
+        (async () => {
+            await loadSettings();
+            addSettingsButton();
+            addTestButton(); // Keep the test button
+
+            const currentUrl = window.location.href;
+            if (currentUrl.includes("facebook.com")) {
+                console.log("Found Facebook URL immediately. Showing warning modal.");
+                showFacebookWarningModal();
+            }
+        })();
+    }
 })();
