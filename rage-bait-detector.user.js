@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rage Bait Detector - Enhanced Post Detection for X and Facebook (English) with GUI
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      b1.6
 // @description  Detects potential "rage bait" in posts, placing a concise score in the top-right and detailed analysis at the bottom, with improved handling for ads and reposts, and enhanced post detection for X and Facebook. Includes a GUI for settings.
 // @author       @quanvm0501alt1, @SamekoSaba
 // @author       @vmquanalt1
