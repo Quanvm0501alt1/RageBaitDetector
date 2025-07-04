@@ -5,6 +5,8 @@ For VN: [README-VN.md](https://github.com/Quanvm0501alt1/RageBaitDetector/blob/m
 
 Seen a lot of rage bait? This script cooked all!
 - Detect Rage Bait in your Facebook and X, make you better and also will make rage bait creator disappear!
+
+Currently Facebook blocking us by using Content Security Policy (CSP), so we will fixing it as soon as we found the algorithm to bypass CSP
 ## How to install?
 Just [click this](https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/rage-bait-detector.user.js) or use the url below
 
