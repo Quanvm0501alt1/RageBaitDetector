@@ -1,47 +1,67 @@
-Privacy Policy for Rage Bait Detector Userscript
+# Privacy Policy for Rage Bait Detector Userscript
 
-Last Updated: July 5, 2025
+_Last Updated: July 5, 2025_
 
-This Privacy Policy describes how the "Rage Bait Detector" userscript ("the Script") handles your data. By installing and using the Script, you agree to the terms outlined below.
-1. External Platforms and Third-Party Policies
+Thank you for choosing to use the **Rage Bait Detector** userscript ("the Script"). This Privacy Policy explains how your data is handled when you use the Script. By installing and using the Script, you agree to the terms outlined here.
 
-IMPORTANT: The Script operates within the browser environment while you are using third-party platforms. Therefore, you must also read and understand the Terms of Service and Privacy Policies of:
+---
 
-    Facebook (Meta Platforms, Inc.)
+## 1. Use on External Platforms
 
-    X (formerly Twitter)
+**Note:** The Script functions within your browser while you interact with third-party platforms. You are also subject to the Terms of Service and Privacy Policies of:
 
-    GroqCloud (Groq, Inc.)
+- **Facebook** (Meta Platforms, Inc.)
+- **X** (formerly Twitter)
+- **GroqCloud** (Groq, Inc.)
 
-We are not responsible for the data practices of these external platforms or services. Your use of the Script does not override their respective policies.
-2. Data Collection and Usage by Our Script
+We do **not** control or take responsibility for the data practices of these external services. Your use of the Script does **not** override their respective policies.
 
-Our Script is designed with your privacy in mind. We want to be transparent about how we handle your data:
+---
 
-    No Sale or Advertising: We do not sell your data to any third parties, nor do we use it for advertising purposes.
+## 2. Data Collection & Usage by This Script
 
-    Internal Usage Only: Any data processed by our Script is primarily used for:
+We value your privacy. Here’s how your data is handled:
 
-        Debugging Bugs and Exploits: To identify and fix issues within the Script, including security vulnerabilities.
+- **No Sale or Advertising:**  
+  We do **not** sell your data to third parties or use it for advertising.
 
-        Security Purposes: To enhance the overall security and integrity of the Script.
+- **Internal Use Only:**  
+  Any data processed by the Script is only used for:
+  - **Debugging & Fixing Issues:**  
+    Identifying and resolving bugs or exploits, including security vulnerabilities.
+  - **Security:**  
+    Improving the security and integrity of the Script.
+  - **Optional Webhook:**  
+    If you enable the webhook feature, it is only used to report posts that are confidently detected as rage bait. You control whether this is enabled.
 
-        Webhook (Optional): The Script may include an optional webhook feature. If enabled by you, this feature is used solely to report instances of posts that are confidently identified as rage bait (e.g., based on high heuristic scores and/or AI confirmation). This data helps us to update and improve the Script's heuristic detection capabilities to catch more rage bait effectively. You will have control over whether this webhook is active.
+---
 
-3. Data Handling with GroqCloud AI
+## 3. Data Handling with GroqCloud AI
 
-    Conditional AI Analysis: As outlined in our Terms of Service, if a post's heuristic score is equal to or greater than 5, the Script will send the post's text content to the GroqCloud AI API for further analysis.
+- **Conditional AI Analysis:**  
+  As described in our Terms of Service, if a post’s heuristic score is **5 or higher**, the Script may send the post’s text content to the GroqCloud AI API for advanced analysis.
 
-    GroqCloud's Practices: Your data, when sent to GroqCloud, is used by their AI to perform the requested detection. We cannot definitively know if GroqCloud uses this data for their own AI model training or other purposes. We advise you to carefully review GroqCloud's Privacy Policy to understand their data handling practices.
+- **GroqCloud’s Data Use:**  
+  When data is sent to GroqCloud, it is used for processing by their AI system. We cannot fully guarantee how GroqCloud handles this data, including whether it is used for AI training or other purposes. Please review GroqCloud’s policies for details.
 
-    Exercise Caution: Given that we do not control GroqCloud's internal data usage, please be careful and do not rely too much on the assumption that your data will not be used for training or other purposes by GroqCloud.
+- **Exercise Caution:**  
+  As we do **not** control GroqCloud’s internal practices, please do **not** assume your data will never be used for purposes beyond detection.
 
-4. Imperfection and User Responsibility
+---
 
-    Continuous Development: Our script is constantly being developed and improved, including the use of AI for debugging and bug finding. Therefore, it IS NOT PERFECT. Remember, our Script IS NOT PERFECT, and you should not rely too heavily on its output.
+## 4. Imperfection & User Responsibility
 
-5. Contact Us
+- **Continuous Development:**  
+  The Script is actively developed—including the use of AI for debugging and bug finding.  
+  **It is NOT perfect.**  
+  Please use the Script with an understanding of its limitations and ongoing improvements.
 
-If you have any questions about this Privacy Policy, or if you believe there is information lacking or issues beyond our stated limits, please feel free to contact me directly on Discord. We will endeavor to check and respond as quickly as possible.
+---
 
-By continuing to use the Rage Bait Detector, you confirm that you have read, understood, and agreed to this Privacy Policy.
+## 5. Contact
+
+If you have questions, concerns, or believe something is missing from this Privacy Policy, please contact me directly on Discord. I will do my best to address your concerns.
+
+---
+
+**By continuing to use the Rage Bait Detector, you confirm that you have read, understood, and agreed to this Privacy Policy.**
