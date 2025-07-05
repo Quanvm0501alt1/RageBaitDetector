@@ -24,4 +24,7 @@ giỡn thôi khi nào saba contact mình và thêm source thì sẽ ra bản spe
 ## Misc.
 Sẽ sớm có thêm nhiều nền tảng mới!
 
-Điều khoản dịch vụ và Chính sách bảo mật sẽ sớm được cập nhật!
+## Điều khoản dịch vụ và Chính sách bảo mật (Tiếng Anh)
+Điều khoản dịch vụ: [Điều khoản dịch vụ](https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/terms-of-service.md) hoặc https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/terms-of-service.md
+
+Chính sách bảo mật: [Chính sách bảo mật](https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/privacy-policy.md) or https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/privacy-policy.md
