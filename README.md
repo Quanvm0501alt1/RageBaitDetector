@@ -23,7 +23,7 @@ More platform are coming soon!
 
 ## Terms of Service and Privacy Policy
 Terms of Service for this rage bait detector: [Terms of Service](github.com/Quanvm0501alt1/RageBaitDetector/blob/main/terms-of-service.md)
-or github.com/Quanvm0501alt1/RageBaitDetector/blob/main/terms-of-service.md
+or https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/terms-of-service.md
 
 Privacy Policy for this rage bait detector: [Privacy Policy](https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/privacy-policy.md)
 or https://github.com/Quanvm0501alt1/RageBaitDetector/blob/main/privacy-policy.md
