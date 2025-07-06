@@ -16,7 +16,7 @@ Sameko Saba [Youtube](https://www.youtube.com/@SamekoSaba) [X](https://x.com/sam
 
 ![what the f**k I am seeing?](https://github.com/user-attachments/assets/544f2a21-df8a-4348-9b18-271f25293e71)
 
-and yep the Special Version for Saba fans coming soon
+Beta version: https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/special/rage-bait-detector-special.user.js
 
 ## Misc.
 More platform are coming soon!
