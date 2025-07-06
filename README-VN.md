@@ -14,11 +14,7 @@ Sameko Saba [Youtube](https://www.youtube.com/@SamekoSaba) [X](https://x.com/sam
 
 ![what the f**k I am seeing?](https://github.com/user-attachments/assets/544f2a21-df8a-4348-9b18-271f25293e71)
 
-và yep khi nào Saba nghe bài trình thì ra phiên bản này
-
-![image](https://github.com/user-attachments/assets/a6fdd42e-ff1c-4b69-af32-1562a3ee9c75)
-
-h cơ bản code hoàn thành chờ con lỏ saba contact thôi
+Beta version: https://github.com/Quanvm0501alt1/RageBaitDetector/raw/refs/heads/main/special/rage-bait-detector-special.user.js
 
 giỡn thôi khi nào saba contact mình và thêm source thì sẽ ra bản special
 ## Misc.
